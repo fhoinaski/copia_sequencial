@@ -1,41 +1,145 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <title>Copiador Sequencial</title>
+    <title>Processador de Credenciais</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: sans-serif;
-            max-width: 100%;
             margin: 0;
-            padding-top: 80px;
+            padding: 20px;
             background-color: #f5f5f5;
+            min-height: 100vh;
         }
 
-        .header {
+        .main-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .button {
+            cursor: pointer;
+            padding: 12px 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background-color: #e0e0e0;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            padding: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            color: #666;
+        }
+
+        .input-area {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
         }
 
         .file-controls {
             display: flex;
             gap: 10px;
             align-items: center;
-            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
         }
 
-        .main-content {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+        #file-input {
+            display: none;
         }
 
+        .input-method {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            min-width: 120px;
+        }
+
+        .input-method:hover {
+            background-color: #0056b3;
+        }
+
+        .input-method.active {
+            background-color: #28a745;
+        }
+
+        /* Credential Card Styles */
         .credential-card {
             background-color: white;
             border-radius: 8px;
@@ -47,20 +151,7 @@
         .credential-info {
             margin-bottom: 15px;
             font-size: 16px;
-        }
-
-        .button {
-            cursor: pointer;
-            padding: 10px 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f0f0f0;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .button:hover {
-            background-color: #e0e0e0;
+            word-break: break-all;
         }
 
         .copy-button {
@@ -85,28 +176,72 @@
             color: #666;
         }
 
-        #file-input {
+        /* Status Message */
+        .status-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 5px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            text-align: center;
+            z-index: 2000;
             display: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
         }
 
-        .error-message {
-            color: red;
-            padding: 10px;
-            background-color: #ffe6e6;
-            border-radius: 5px;
-            margin: 10px 0;
+        @media (max-width: 600px) {
+            .input-controls {
+                flex-direction: column;
+            }
+
+            .button {
+                width: 100%;
+            }
+
+            .modal-content {
+                padding: 15px;
+                width: 95%;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <div class="file-controls">
-            <button id="select-file" class="button">Selecionar arquivo TXT</button>
-            <span id="file-path-display">Nenhum arquivo selecionado</span>
-            <input type="file" id="file-input" accept=".txt">
+    <div class="main-header">
+        <div class="input-controls">
+            <button id="file-method" class="button input-method">Arquivo TXT</button>
+            <button id="text-method" class="button input-method active">Digitar Lista</button>
         </div>
     </div>
+
+    <!-- Modal -->
+    <div id="input-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Inserir Credenciais</h2>
+                <button class="close-modal" onclick="app.closeModal()">&times;</button>
+            </div>
+            
+            <div id="file-area" class="input-area">
+                <div class="file-controls">
+                    <button id="select-file" class="button">Selecionar arquivo TXT</button>
+                    <span id="file-path-display">Nenhum arquivo selecionado</span>
+                    <input type="file" id="file-input" accept=".txt">
+                </div>
+            </div>
+
+            <div id="text-area" class="input-area">
+                <textarea id="credentials-input" placeholder="Cole sua lista aqui no formato email:senha&#10;Exemplo:&#10;email@exemplo.com:senha123&#10;outro@exemplo.com:senha456"></textarea>
+                <button id="process-text" class="button">Processar Lista</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="status-message" class="status-message"></div>
 
     <div class="main-content">
         <div id="credential-display"></div>
@@ -123,23 +258,122 @@
             }
 
             setupElements() {
+                this.modal = document.getElementById('input-modal');
+                this.modalTitle = document.getElementById('modal-title');
                 this.fileInput = document.getElementById('file-input');
                 this.selectFileButton = document.getElementById('select-file');
                 this.filePathDisplay = document.getElementById('file-path-display');
                 this.credentialDisplay = document.getElementById('credential-display');
+                this.fileMethodButton = document.getElementById('file-method');
+                this.textMethodButton = document.getElementById('text-method');
+                this.fileArea = document.getElementById('file-area');
+                this.textArea = document.getElementById('text-area');
+                this.textInput = document.getElementById('credentials-input');
+                this.processTextButton = document.getElementById('process-text');
+                this.statusMessage = document.getElementById('status-message');
             }
 
             initializeEventListeners() {
                 this.selectFileButton.addEventListener('click', () => this.fileInput.click());
                 this.fileInput.addEventListener('change', () => this.handleFileInput());
-                window.addEventListener('beforeunload', () => this.saveState());
+                this.fileMethodButton.addEventListener('click', () => this.switchMethod('file'));
+                this.textMethodButton.addEventListener('click', () => this.switchMethod('text'));
+                this.processTextButton.addEventListener('click', () => this.processTextInput());
+                
+                // Close modal when clicking outside
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            openModal() {
+                this.modal.classList.add('active');
+            }
+
+            closeModal() {
+                this.modal.classList.remove('active');
+            }
+
+            showStatusMessage(message, isError = false) {
+                this.statusMessage.textContent = message;
+                this.statusMessage.style.display = 'block';
+                this.statusMessage.style.backgroundColor = isError ? '#ffe6e6' : '#e8f5e9';
+                this.statusMessage.style.color = isError ? '#d32f2f' : '#2e7d32';
+                
+                setTimeout(() => {
+                    this.statusMessage.style.display = 'none';
+                }, 3000);
+            }
+
+            switchMethod(method) {
+                this.fileMethodButton.classList.toggle('active', method === 'file');
+                this.textMethodButton.classList.toggle('active', method === 'text');
+                this.fileArea.style.display = method === 'file' ? 'block' : 'none';
+                this.textArea.style.display = method === 'text' ? 'block' : 'none';
+                this.modalTitle.textContent = method === 'file' ? 'Selecionar Arquivo' : 'Inserir Lista';
+                
+                // Clear inputs
+                this.textInput.value = '';
+                this.fileInput.value = '';
+                this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
+                
+                this.openModal();
+            }
+
+            async processTextInput() {
+                const text = this.textInput.value.trim();
+                if (!text) {
+                    this.showStatusMessage("Por favor, insira algumas credenciais.", true);
+                    return;
+                }
+
+                try {
+                    const lines = text.split('\n');
+                    await this.processCredentialLines(lines);
+                    this.showStatusMessage("Lista processada com sucesso!");
+                    this.closeModal();
+                    this.textInput.value = '';
+                } catch (error) {
+                    this.showStatusMessage("Erro ao processar as credenciais. Verifique o formato.", true);
+                }
             }
 
             generateUsername(email) {
                 const username = email.split('@')[0];
-                const randomNumbers = Math.floor(Math.random() * 900) + 100; // Gera um número de 3 dígitos
-                const randomLetters = Math.random().toString(36).substring(2, 5); // Gera 3 letras aleatórias
+                const randomNumbers = Math.floor(Math.random() * 900) + 100;
+                const randomLetters = Math.random().toString(36).substring(2, 5);
                 return `${username}${randomNumbers}${randomLetters}`;
+            }
+
+            async processCredentialLines(lines) {
+                const validCredentials = lines
+                    .filter(line => line.trim())
+                    .map(line => {
+                        const [email, senha] = line.split(':');
+                        if (!email || !senha) {
+                            return null;
+                        }
+                        const username = this.generateUsername(email.trim());
+                        return {
+                            email: email.trim(),
+                            senha: senha.trim(),
+                            username: username
+                        };
+                    })
+                    .filter(cred => cred !== null);
+
+                if (validCredentials.length === 0) {
+                    throw new Error('Nenhuma credencial válida encontrada');
+                }
+
+                this.credentials = validCredentials;
+                this.currentIndex = 0;
+                localStorage.removeItem('copyProgress');
+                localStorage.removeItem('copiedCredentials');
+                this.saveState();
+                this.displayCurrentCredential();
             }
 
             loadSavedState() {
@@ -152,7 +386,6 @@
                 const savedCredentials = localStorage.getItem('savedCredentials');
                 if (savedCredentials) {
                     this.credentials = JSON.parse(savedCredentials);
-                    this.filePathDisplay.textContent = "Arquivo carregado da sessão anterior";
                     this.displayCurrentCredential();
                 }
             }
@@ -171,11 +404,6 @@
                 const copied = JSON.parse(localStorage.getItem('copiedCredentials') || '{}');
                 copied[email.toLowerCase()] = true;
                 localStorage.setItem('copiedCredentials', JSON.stringify(copied));
-            }
-
-            isCredentialCopied(email) {
-                const copied = JSON.parse(localStorage.getItem('copiedCredentials') || '{}');
-                return copied[email.toLowerCase()] || false;
             }
 
             async handleCopy(text, type) {
@@ -199,12 +427,12 @@
                     }
                 } catch (err) {
                     console.error('Erro ao copiar:', err);
-                    alert('Erro ao copiar para a área de transferência');
+                    this.showStatusMessage('Erro ao copiar para a área de transferência', true);
                 }
             }
 
             displayCurrentCredential() {
-                if (this.currentIndex >= this.credentials.length) {
+                if (!this.credentials.length || this.currentIndex >= this.credentials.length) {
                     this.credentialDisplay.innerHTML = `
                         <div class="credential-card">
                             <h2>Todas as credenciais foram copiadas!</h2>
@@ -216,7 +444,6 @@
 
                 const credential = this.credentials[this.currentIndex];
                 const totalCredentials = this.credentials.length;
-                const username = credential.username || this.generateUsername(credential.email);
 
                 this.credentialDisplay.innerHTML = `
                     <div class="credential-card">
@@ -227,7 +454,7 @@
                             <strong>Senha:</strong> ${credential.senha}
                         </div>
                         <div class="credential-info">
-                            <strong>Nome de Usuário:</strong> ${username}
+                            <strong>Nome de Usuário:</strong> ${credential.username}
                         </div>
                         <button id="copy-email" class="button copy-button" onclick="app.handleCopy('${credential.email.toLowerCase()}', 'email')">
                             Copiar Email
@@ -235,7 +462,7 @@
                         <button id="copy-senha" class="button copy-button" onclick="app.handleCopy('${credential.senha}', 'senha')">
                             Copiar Senha
                         </button>
-                        <button id="copy-username" class="button copy-button" onclick="app.handleCopy('${username}', 'username')">
+                        <button id="copy-username" class="button copy-button" onclick="app.handleCopy('${credential.username}', 'username')">
                             Copiar Nome de Usuário
                         </button>
                         <div class="progress">
@@ -247,52 +474,38 @@
 
             resetProgress() {
                 this.currentIndex = 0;
-                localStorage.setItem('copyProgress', JSON.stringify({ currentIndex: 0 }));
+                this.credentials = [];
+                localStorage.removeItem('copyProgress');
                 localStorage.removeItem('copiedCredentials');
-                this.displayCurrentCredential();
+                localStorage.removeItem('savedCredentials');
+                this.textInput.value = '';
+                this.fileInput.value = '';
+                this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
+                this.credentialDisplay.innerHTML = '';
+                this.switchMethod('text');
             }
 
-            handleFileInput() {
+            async handleFileInput() {
                 const file = this.fileInput.files[0];
                 if (file) {
                     this.filePathDisplay.textContent = file.name;
                     const reader = new FileReader();
 
-                    reader.onload = (event) => {
+                    reader.onload = async (event) => {
                         try {
                             const lines = event.target.result.split('\n');
-                            this.credentials = lines
-                                .filter(line => line.trim())
-                                .map(line => {
-                                    const [email, senha] = line.split(':');
-                                    const username = this.generateUsername(email.trim());
-                                    return {
-                                        email: email.trim(),
-                                        senha: senha.trim(),
-                                        username: username
-                                    };
-                                });
-
-                            this.currentIndex = 0;
-                            localStorage.removeItem('copyProgress');
-                            localStorage.removeItem('copiedCredentials');
-                            this.saveState();
-                            this.displayCurrentCredential();
+                            await this.processCredentialLines(lines);
+                            this.showStatusMessage("Arquivo processado com sucesso!");
+                            this.closeModal();
                         } catch (error) {
                             console.error('Erro ao processar arquivo:', error);
-                            this.credentialDisplay.innerHTML = `
-                                <p class="error-message">
-                                    Erro ao processar o arquivo. Certifique-se que está no formato correto (email:senha).
-                                </p>
-                            `;
+                            this.showStatusMessage('Erro ao processar o arquivo. Certifique-se que está no formato correto (email:senha).', true);
                         }
                     };
 
                     reader.onerror = (error) => {
                         console.error('Erro ao ler o arquivo:', error);
-                        this.credentialDisplay.innerHTML = `
-                            <p class="error-message">Erro ao ler o arquivo.</p>
-                        `;
+                        this.showStatusMessage('Erro ao ler o arquivo.', true);
                     };
 
                     reader.readAsText(file);
@@ -307,5 +520,4 @@
         const app = new SequentialCopier();
     </script>
 </body>
-
 </html>
