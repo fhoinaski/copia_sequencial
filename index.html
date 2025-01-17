@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Copiador Sequencial</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 100%;
+            margin: 0;
+            padding-top: 80px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: 15px;
+        }
+
+        .file-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-content {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .credential-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .credential-info {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .copy-button {
+            width: 100%;
+            margin-bottom: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
+
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+
+        .copy-button.copied {
+            background-color: #28a745;
+        }
+
+        .progress {
+            margin-top: 20px;
+            text-align: center;
+            color: #666;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .error-message {
+            color: red;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="file-controls">
+            <button id="select-file" class="button">Selecionar arquivo TXT</button>
+            <span id="file-path-display">Nenhum arquivo selecionado</span>
+            <input type="file" id="file-input" accept=".txt">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="credential-display"></div>
+    </div>
+
+    <script>
+        class SequentialCopier {
+            constructor() {
+                this.credentials = [];
+                this.currentIndex = 0;
+                this.setupElements();
+                this.initializeEventListeners();
+                this.loadSavedState();
+            }
+
+            setupElements() {
+                this.fileInput = document.getElementById('file-input');
+                this.selectFileButton = document.getElementById('select-file');
+                this.filePathDisplay = document.getElementById('file-path-display');
+                this.credentialDisplay = document.getElementById('credential-display');
+            }
+
+            initializeEventListeners() {
+                this.selectFileButton.addEventListener('click', () => this.fileInput.click());
+                this.fileInput.addEventListener('change', () => this.handleFileInput());
+                window.addEventListener('beforeunload', () => this.saveState());
+            }
+
+            generateUsername(email) {
+                const username = email.split('@')[0];
+                const randomNumbers = Math.floor(Math.random() * 900) + 100; // Gera um número de 3 dígitos
+                const randomLetters = Math.random().toString(36).substring(2, 5); // Gera 3 letras aleatórias
+                return `${username}${randomNumbers}${randomLetters}`;
+            }
+
+            loadSavedState() {
+                const savedProgress = localStorage.getItem('copyProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    this.currentIndex = progress.currentIndex || 0;
+                }
+
+                const savedCredentials = localStorage.getItem('savedCredentials');
+                if (savedCredentials) {
+                    this.credentials = JSON.parse(savedCredentials);
+                    this.filePathDisplay.textContent = "Arquivo carregado da sessão anterior";
+                    this.displayCurrentCredential();
+                }
+            }
+
+            saveState() {
+                localStorage.setItem('copyProgress', JSON.stringify({
+                    currentIndex: this.currentIndex,
+                }));
+
+                if (this.credentials.length > 0) {
+                    localStorage.setItem('savedCredentials', JSON.stringify(this.credentials));
+                }
+            }
+
+            markCredentialCopied(email) {
+                const copied = JSON.parse(localStorage.getItem('copiedCredentials') || '{}');
+                copied[email.toLowerCase()] = true;
+                localStorage.setItem('copiedCredentials', JSON.stringify(copied));
+            }
+
+            isCredentialCopied(email) {
+                const copied = JSON.parse(localStorage.getItem('copiedCredentials') || '{}');
+                return copied[email.toLowerCase()] || false;
+            }
+
+            async handleCopy(text, type) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const button = document.querySelector(`#copy-${type}`);
+                    button.textContent = 'Copiado!';
+                    button.classList.add('copied');
+
+                    const currentCred = this.credentials[this.currentIndex];
+                    const allCopied =
+                        document.querySelector('#copy-email').classList.contains('copied') &&
+                        document.querySelector('#copy-senha').classList.contains('copied') &&
+                        document.querySelector('#copy-username').classList.contains('copied');
+
+                    if (allCopied) {
+                        this.markCredentialCopied(currentCred.email);
+                        this.currentIndex++;
+                        this.saveState();
+                        setTimeout(() => this.displayCurrentCredential(), 500);
+                    }
+                } catch (err) {
+                    console.error('Erro ao copiar:', err);
+                    alert('Erro ao copiar para a área de transferência');
+                }
+            }
+
+            displayCurrentCredential() {
+                if (this.currentIndex >= this.credentials.length) {
+                    this.credentialDisplay.innerHTML = `
+                        <div class="credential-card">
+                            <h2>Todas as credenciais foram copiadas!</h2>
+                            <button class="button" onclick="app.resetProgress()">Recomeçar</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const credential = this.credentials[this.currentIndex];
+                const totalCredentials = this.credentials.length;
+                const username = credential.username || this.generateUsername(credential.email);
+
+                this.credentialDisplay.innerHTML = `
+                    <div class="credential-card">
+                        <div class="credential-info">
+                            <strong>Email:</strong> ${credential.email.toLowerCase()}
+                        </div>
+                        <div class="credential-info">
+                            <strong>Senha:</strong> ${credential.senha}
+                        </div>
+                        <div class="credential-info">
+                            <strong>Nome de Usuário:</strong> ${username}
+                        </div>
+                        <button id="copy-email" class="button copy-button" onclick="app.handleCopy('${credential.email.toLowerCase()}', 'email')">
+                            Copiar Email
+                        </button>
+                        <button id="copy-senha" class="button copy-button" onclick="app.handleCopy('${credential.senha}', 'senha')">
+                            Copiar Senha
+                        </button>
+                        <button id="copy-username" class="button copy-button" onclick="app.handleCopy('${username}', 'username')">
+                            Copiar Nome de Usuário
+                        </button>
+                        <div class="progress">
+                            Credencial ${this.currentIndex + 1} de ${totalCredentials}
+                        </div>
+                    </div>
+                `;
+            }
+
+            resetProgress() {
+                this.currentIndex = 0;
+                localStorage.setItem('copyProgress', JSON.stringify({ currentIndex: 0 }));
+                localStorage.removeItem('copiedCredentials');
+                this.displayCurrentCredential();
+            }
+
+            handleFileInput() {
+                const file = this.fileInput.files[0];
+                if (file) {
+                    this.filePathDisplay.textContent = file.name;
+                    const reader = new FileReader();
+
+                    reader.onload = (event) => {
+                        try {
+                            const lines = event.target.result.split('\n');
+                            this.credentials = lines
+                                .filter(line => line.trim())
+                                .map(line => {
+                                    const [email, senha] = line.split(':');
+                                    const username = this.generateUsername(email.trim());
+                                    return {
+                                        email: email.trim(),
+                                        senha: senha.trim(),
+                                        username: username
+                                    };
+                                });
+
+                            this.currentIndex = 0;
+                            localStorage.removeItem('copyProgress');
+                            localStorage.removeItem('copiedCredentials');
+                            this.saveState();
+                            this.displayCurrentCredential();
+                        } catch (error) {
+                            console.error('Erro ao processar arquivo:', error);
+                            this.credentialDisplay.innerHTML = `
+                                <p class="error-message">
+                                    Erro ao processar o arquivo. Certifique-se que está no formato correto (email:senha).
+                                </p>
+                            `;
+                        }
+                    };
+
+                    reader.onerror = (error) => {
+                        console.error('Erro ao ler o arquivo:', error);
+                        this.credentialDisplay.innerHTML = `
+                            <p class="error-message">Erro ao ler o arquivo.</p>
+                        `;
+                    };
+
+                    reader.readAsText(file);
+                } else {
+                    this.filePathDisplay.textContent = "Nenhum arquivo selecionado";
+                    this.credentialDisplay.innerHTML = "";
+                }
+            }
+        }
+
+        // Initialize the application
+        const app = new SequentialCopier();
+    </script>
+</body>
+
+</html>
