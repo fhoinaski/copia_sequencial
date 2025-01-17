@@ -413,7 +413,7 @@
                 this.fileMethodButton.addEventListener('click', () => this.switchMethod('file'));
                 this.textMethodButton.addEventListener('click', () => this.switchMethod('text'));
                 this.processTextButton.addEventListener('click', () => this.processTextInput());
-                this.clearDataButton.addEventListener('click', () => this.clearData());
+                this.clearDataButton.addEventListener('click', () => this.confirmClearData());
                 this.exportXsollaButton.addEventListener('click', () => this.exportXsollaCredentials());
                 this.confirmTypeButton.addEventListener('click', () => this.handleTypeConfirmation());
                 
@@ -428,6 +428,13 @@
                         this.closeTypeModal();
                     }
                 });
+            }
+
+            confirmClearData() {
+                const confirmation = confirm("Tem certeza que deseja limpar todos os dados?");
+                if (confirmation) {
+                    this.clearData();
+                }
             }
 
             clearData() {
