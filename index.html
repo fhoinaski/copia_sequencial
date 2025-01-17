@@ -45,7 +45,16 @@
             background-color: #e0e0e0;
         }
 
-        /* Modal Styles */
+        .clear-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+
+        .clear-button:hover {
+            background-color: #c82333;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -139,7 +148,6 @@
             background-color: #28a745;
         }
 
-        /* Credential Card Styles */
         .credential-card {
             background-color: white;
             border-radius: 8px;
@@ -176,7 +184,6 @@
             color: #666;
         }
 
-        /* Status Message */
         .status-message {
             position: fixed;
             top: 20px;
@@ -215,10 +222,10 @@
         <div class="input-controls">
             <button id="file-method" class="button input-method">Arquivo TXT</button>
             <button id="text-method" class="button input-method active">Digitar Lista</button>
+            <button id="clear-data" class="button clear-button">Limpar Dados</button>
         </div>
     </div>
 
-    <!-- Modal -->
     <div id="input-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -271,6 +278,7 @@
                 this.textInput = document.getElementById('credentials-input');
                 this.processTextButton = document.getElementById('process-text');
                 this.statusMessage = document.getElementById('status-message');
+                this.clearDataButton = document.getElementById('clear-data');
             }
 
             initializeEventListeners() {
@@ -279,8 +287,8 @@
                 this.fileMethodButton.addEventListener('click', () => this.switchMethod('file'));
                 this.textMethodButton.addEventListener('click', () => this.switchMethod('text'));
                 this.processTextButton.addEventListener('click', () => this.processTextInput());
+                this.clearDataButton.addEventListener('click', () => this.clearData());
                 
-                // Close modal when clicking outside
                 this.modal.addEventListener('click', (e) => {
                     if (e.target === this.modal) {
                         this.closeModal();
@@ -288,12 +296,15 @@
                 });
             }
 
-            openModal() {
-                this.modal.classList.add('active');
-            }
-
-            closeModal() {
-                this.modal.classList.remove('active');
+            clearData() {
+                localStorage.clear();
+                this.credentials = [];
+                this.currentIndex = 0;
+                this.credentialDisplay.innerHTML = '';
+                this.textInput.value = '';
+                this.fileInput.value = '';
+                this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
+                this.showStatusMessage("Dados limpos com sucesso!");
             }
 
             showStatusMessage(message, isError = false) {
@@ -307,6 +318,14 @@
                 }, 3000);
             }
 
+            openModal() {
+                this.modal.classList.add('active');
+            }
+
+            closeModal() {
+                this.modal.classList.remove('active');
+            }
+
             switchMethod(method) {
                 this.fileMethodButton.classList.toggle('active', method === 'file');
                 this.textMethodButton.classList.toggle('active', method === 'text');
@@ -314,7 +333,6 @@
                 this.textArea.style.display = method === 'text' ? 'block' : 'none';
                 this.modalTitle.textContent = method === 'file' ? 'Selecionar Arquivo' : 'Inserir Lista';
                 
-                // Clear inputs
                 this.textInput.value = '';
                 this.fileInput.value = '';
                 this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
@@ -370,8 +388,6 @@
 
                 this.credentials = validCredentials;
                 this.currentIndex = 0;
-                localStorage.removeItem('copyProgress');
-                localStorage.removeItem('copiedCredentials');
                 this.saveState();
                 this.displayCurrentCredential();
             }
@@ -400,12 +416,6 @@
                 }
             }
 
-            markCredentialCopied(email) {
-                const copied = JSON.parse(localStorage.getItem('copiedCredentials') || '{}');
-                copied[email.toLowerCase()] = true;
-                localStorage.setItem('copiedCredentials', JSON.stringify(copied));
-            }
-
             async handleCopy(text, type) {
                 try {
                     await navigator.clipboard.writeText(text);
@@ -420,7 +430,6 @@
                         document.querySelector('#copy-username').classList.contains('copied');
 
                     if (allCopied) {
-                        this.markCredentialCopied(currentCred.email);
                         this.currentIndex++;
                         this.saveState();
                         setTimeout(() => this.displayCurrentCredential(), 500);
@@ -436,7 +445,7 @@
                     this.credentialDisplay.innerHTML = `
                         <div class="credential-card">
                             <h2>Todas as credenciais foram copiadas!</h2>
-                            <button class="button" onclick="app.resetProgress()">Recomeçar</button>
+                            <button class="button" onclick="app.switchMethod('text')">Inserir Nova Lista</button>
                         </div>
                     `;
                     return;
@@ -470,19 +479,6 @@
                         </div>
                     </div>
                 `;
-            }
-
-            resetProgress() {
-                this.currentIndex = 0;
-                this.credentials = [];
-                localStorage.removeItem('copyProgress');
-                localStorage.removeItem('copiedCredentials');
-                localStorage.removeItem('savedCredentials');
-                this.textInput.value = '';
-                this.fileInput.value = '';
-                this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
-                this.credentialDisplay.innerHTML = '';
-                this.switchMethod('text');
             }
 
             async handleFileInput() {
