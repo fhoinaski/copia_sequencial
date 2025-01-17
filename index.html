@@ -55,6 +55,16 @@
             background-color: #c82333;
         }
 
+        .export-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+        }
+
+        .export-button:hover {
+            background-color: #218838;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -107,6 +117,15 @@
         .input-area {
             width: 100%;
             margin-bottom: 20px;
+        }
+
+        .type-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .type-selector label {
+            margin-right: 10px;
         }
 
         textarea {
@@ -214,6 +233,83 @@
                 width: 95%;
             }
         }
+
+        .type-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px 0;
+        }
+
+        .type-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .type-button {
+            padding: 20px;
+            width: 160px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .type-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .type-button.selected {
+            border-color: #28a745;
+            background-color: #e8f5e9;
+        }
+
+        .type-button-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .type-button-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .type-button-description {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        .type-confirm-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin: 20px auto;
+            display: block;
+            width: 200px;
+        }
+
+        .type-confirm-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .type-confirm-button:hover:not(:disabled) {
+            background-color: #218838;
+        }
     </style>
 </head>
 
@@ -223,6 +319,7 @@
             <button id="file-method" class="button input-method">Arquivo TXT</button>
             <button id="text-method" class="button input-method active">Digitar Lista</button>
             <button id="clear-data" class="button clear-button">Limpar Dados</button>
+            <button id="export-xsolla" class="button export-button">Exportar Xsolla</button>
         </div>
     </div>
 
@@ -232,7 +329,7 @@
                 <h2 class="modal-title" id="modal-title">Inserir Credenciais</h2>
                 <button class="close-modal" onclick="app.closeModal()">&times;</button>
             </div>
-            
+
             <div id="file-area" class="input-area">
                 <div class="file-controls">
                     <button id="select-file" class="button">Selecionar arquivo TXT</button>
@@ -248,6 +345,30 @@
         </div>
     </div>
 
+    <div id="type-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Selecionar Tipo da Conta</h2>
+                <button class="close-modal" onclick="app.closeTypeModal()">&times;</button>
+            </div>
+            <div class="type-selector">
+                <div class="type-buttons">
+                    <div class="type-button" data-type="coda" onclick="app.selectType('coda', this)">
+                        <div class="type-button-icon">🎮</div>
+                        <div class="type-button-label">CODA</div>
+                        <div class="type-button-description">Para contas do tipo Coda</div>
+                    </div>
+                    <div class="type-button" data-type="xsolla" onclick="app.selectType('xsolla', this)">
+                        <div class="type-button-icon">🎯</div>
+                        <div class="type-button-label">XSOLLA</div>
+                        <div class="type-button-description">Para contas do tipo Xsolla</div>
+                    </div>
+                </div>
+                <button id="confirm-type" class="type-confirm-button" disabled>Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+
     <div id="status-message" class="status-message"></div>
 
     <div class="main-content">
@@ -259,6 +380,7 @@
             constructor() {
                 this.credentials = [];
                 this.currentIndex = 0;
+                this.selectedType = null;
                 this.setupElements();
                 this.initializeEventListeners();
                 this.loadSavedState();
@@ -266,6 +388,7 @@
 
             setupElements() {
                 this.modal = document.getElementById('input-modal');
+                this.typeModal = document.getElementById('type-modal');
                 this.modalTitle = document.getElementById('modal-title');
                 this.fileInput = document.getElementById('file-input');
                 this.selectFileButton = document.getElementById('select-file');
@@ -279,6 +402,9 @@
                 this.processTextButton = document.getElementById('process-text');
                 this.statusMessage = document.getElementById('status-message');
                 this.clearDataButton = document.getElementById('clear-data');
+                this.exportXsollaButton = document.getElementById('export-xsolla');
+                this.credentialTypeSelect = document.getElementById('credential-type');
+                this.confirmTypeButton = document.querySelector('.type-confirm-button');
             }
 
             initializeEventListeners() {
@@ -288,10 +414,18 @@
                 this.textMethodButton.addEventListener('click', () => this.switchMethod('text'));
                 this.processTextButton.addEventListener('click', () => this.processTextInput());
                 this.clearDataButton.addEventListener('click', () => this.clearData());
+                this.exportXsollaButton.addEventListener('click', () => this.exportXsollaCredentials());
+                this.confirmTypeButton.addEventListener('click', () => this.handleTypeConfirmation());
                 
                 this.modal.addEventListener('click', (e) => {
                     if (e.target === this.modal) {
                         this.closeModal();
+                    }
+                });
+
+                this.typeModal.addEventListener('click', (e) => {
+                    if (e.target === this.typeModal) {
+                        this.closeTypeModal();
                     }
                 });
             }
@@ -326,6 +460,14 @@
                 this.modal.classList.remove('active');
             }
 
+            openTypeModal() {
+                this.typeModal.classList.add('active');
+            }
+
+            closeTypeModal() {
+                this.typeModal.classList.remove('active');
+            }
+
             switchMethod(method) {
                 this.fileMethodButton.classList.toggle('active', method === 'file');
                 this.textMethodButton.classList.toggle('active', method === 'text');
@@ -338,6 +480,30 @@
                 this.filePathDisplay.textContent = 'Nenhum arquivo selecionado';
                 
                 this.openModal();
+            }
+
+            exportXsollaCredentials() {
+                const xsollaCredentials = this.credentials
+                    .filter(cred => cred.type === 'xsolla')
+                    .map(cred => `${cred.email}:${cred.senha}`)
+                    .join(' ');
+
+                if (!xsollaCredentials) {
+                    this.showStatusMessage('Nenhuma credencial Xsolla encontrada!', true);
+                    return;
+                }
+
+                const blob = new Blob([xsollaCredentials], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'xsolla_credentials.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showStatusMessage('Credenciais Xsolla exportadas com sucesso!');
             }
 
             async processTextInput() {
@@ -377,7 +543,8 @@
                         return {
                             email: email.trim(),
                             senha: senha.trim(),
-                            username: username
+                            username: username,
+                            type: null // Type will be set when copying is complete
                         };
                     })
                     .filter(cred => cred !== null);
@@ -430,14 +597,51 @@
                         document.querySelector('#copy-username').classList.contains('copied');
 
                     if (allCopied) {
-                        this.currentIndex++;
-                        this.saveState();
-                        setTimeout(() => this.displayCurrentCredential(), 500);
+                        this.openTypeModal();
                     }
                 } catch (err) {
                     console.error('Erro ao copiar:', err);
                     this.showStatusMessage('Erro ao copiar para a área de transferência', true);
                 }
+            }
+
+            selectType(type, buttonElement) {
+                // Remove seleção anterior
+                document.querySelectorAll('.type-button').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                
+                // Seleciona o novo tipo
+                buttonElement.classList.add('selected');
+                this.selectedType = type;
+                
+                // Habilita o botão de confirmar
+                this.confirmTypeButton.disabled = false;
+            }
+
+            handleTypeConfirmation() {
+                if (!this.selectedType) return;
+
+                this.credentials[this.currentIndex].type = this.selectedType;
+                this.saveState();
+                this.closeTypeModal();
+                this.currentIndex++;
+                
+                // Reset da seleção
+                this.selectedType = null;
+                this.confirmTypeButton.disabled = true;
+                document.querySelectorAll('.type-button').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                
+                // Reset dos botões de cópia
+                const copyButtons = document.querySelectorAll('.copy-button');
+                copyButtons.forEach(button => {
+                    button.classList.remove('copied');
+                    button.textContent = button.textContent.replace('Copiado!', 'Copiar');
+                });
+                
+                this.displayCurrentCredential();
             }
 
             displayCurrentCredential() {
