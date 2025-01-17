@@ -493,14 +493,15 @@
                 const xsollaCredentials = this.credentials
                     .filter(cred => cred.type === 'xsolla')
                     .map(cred => `${cred.email}:${cred.senha}`)
-                    .join(' ');
+                    .join('\n');
 
                 if (!xsollaCredentials) {
                     this.showStatusMessage('Nenhuma credencial Xsolla encontrada!', true);
                     return;
                 }
 
-                const blob = new Blob([xsollaCredentials], { type: 'text/plain' });
+                const dateMarker = `\n\n--- Exportado em: ${new Date().toLocaleString()} ---\n\n`;
+                const blob = new Blob([xsollaCredentials + dateMarker], { type: 'text/plain' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
